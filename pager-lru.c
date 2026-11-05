@@ -1,6 +1,7 @@
 #include <stdio.h> 
 #include <stdlib.h>
 #include "simulator.h"
+#define QUOTA 2   /* per-process frame quota before switching to MRU eviction */
  
 void pageit(Pentry q[MAXPROCESSES]) { 
  
@@ -65,17 +66,24 @@ void pageit(Pentry q[MAXPROCESSES]) {
         needed++;
         if (needed <= pending_out) continue;        /* frames already on the way */
  
-        /* evict the globally least recently used page not used this tick */
         int vproc = -1, vpage = -1, oldest = tick;
-        for (int p = 0; p < MAXPROCESSES; p++) {
+        /* count this process's resident pages */
+        int mine = 0;
+        for (int pg = 0; pg < MAXPROCPAGES; pg++) if (q[proc].pages[pg]) mine++;
+        if (mine >= QUOTA) {
+            /* over quota: evict own MOST recently used page (best for loops) */
+            int newest = -1;
             for (int pg = 0; pg < MAXPROCPAGES; pg++) {
-                if (!q[p].pages[pg]) continue;      /* not resident */
-                if (timestamps[p][pg] < oldest) {
-                    oldest = timestamps[p][pg];
-                    vproc = p;
-                    vpage = pg;
-                }
+                if (!q[proc].pages[pg] || timestamps[proc][pg] >= tick) continue;
+                if (timestamps[proc][pg] > newest) { newest = timestamps[proc][pg]; vproc = proc; vpage = pg; }
             }
+        }
+        if (vproc < 0) {
+            for (int p = 0; p < MAXPROCESSES; p++)
+                for (int pg = 0; pg < MAXPROCPAGES; pg++) {
+                    if (!q[p].pages[pg]) continue;
+                    if (timestamps[p][pg] < oldest) { oldest = timestamps[p][pg]; vproc = p; vpage = pg; }
+                }
         }
         if (vproc >= 0 && pageout(vproc, vpage)) {
             outstart[vproc][vpage] = tick;
