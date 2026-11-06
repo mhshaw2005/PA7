@@ -64,7 +64,8 @@ void pageit(Pentry q[MAXPROCESSES]) {
  
         /* pagein failed for lack of frames */
         needed++;
-        if (needed <= pending_out) continue;        /* frames already on the way */
+        if (needed <= pending_out) 
+            continue;        /* frames already on the way */
  
         int vproc = -1, vpage = -1, oldest = tick;
         /* count this process's resident pages */
@@ -74,15 +75,19 @@ void pageit(Pentry q[MAXPROCESSES]) {
             /* over quota: evict own MOST recently used page (best for loops) */
             int newest = -1;
             for (int pg = 0; pg < MAXPROCPAGES; pg++) {
-                if (!q[proc].pages[pg] || timestamps[proc][pg] >= tick) continue;
-                if (timestamps[proc][pg] > newest) { newest = timestamps[proc][pg]; vproc = proc; vpage = pg; }
+                if (!q[proc].pages[pg] || timestamps[proc][pg] >= tick) 
+                    continue;
+                if (timestamps[proc][pg] > newest){
+                 newest = timestamps[proc][pg]; vproc = proc; vpage = pg; }
             }
         }
         if (vproc < 0) {
             for (int p = 0; p < MAXPROCESSES; p++)
                 for (int pg = 0; pg < MAXPROCPAGES; pg++) {
-                    if (!q[p].pages[pg]) continue;
-                    if (timestamps[p][pg] < oldest) { oldest = timestamps[p][pg]; vproc = p; vpage = pg; }
+                    if (!q[p].pages[pg]) 
+                        continue;
+                    if (timestamps[p][pg] < oldest) {
+                        oldest = timestamps[p][pg]; vproc = p; vpage = pg; }
                 }
         }
         if (vproc >= 0 && pageout(vproc, vpage)) {
